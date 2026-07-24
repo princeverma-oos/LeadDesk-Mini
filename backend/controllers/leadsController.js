@@ -7,7 +7,8 @@ let demoLeads = [
     _id: 'demo_1',
     name: 'John Doe',
     email: 'john.doe@example.com',
-    budget: '$1000–$5000',
+    company: 'Acme Corp',
+    phone: '+1 555-0199',
     message: 'We are looking to build a custom SaaS workspace and customer management tool for our sales team.',
     status: 'New',
     createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
@@ -16,7 +17,8 @@ let demoLeads = [
     _id: 'demo_2',
     name: 'Alice Smith',
     email: 'alice.smith@techcorp.io',
-    budget: '< $500',
+    company: 'TechCorp Solutions',
+    phone: '+1 555-0142',
     message: 'Need standard landing page visual adjustments and Framer Motion micro-animations.',
     status: 'Contacted',
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
@@ -25,16 +27,18 @@ let demoLeads = [
     _id: 'demo_3',
     name: 'Robert Johnson',
     email: 'robert@ventures.co',
-    budget: '>$5000',
+    company: 'Ventures Co',
+    phone: '+1 555-0177',
     message: 'Seeking a full-stack engineer to build our core marketplace MVP. High scale Node/Express/MongoDB requirements.',
-    status: 'New',
+    status: 'Qualified',
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
   },
   {
     _id: 'demo_4',
     name: 'Sarah Connor',
     email: 's.connor@cyberdyne.com',
-    budget: '$500–$1000',
+    company: 'Cyberdyne Systems',
+    phone: '+1 555-0153',
     message: 'Require custom React Hook Form integrations and dark mode styles for a defense portal.',
     status: 'Closed',
     createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000)
@@ -43,7 +47,8 @@ let demoLeads = [
     _id: 'demo_5',
     name: 'David Lightman',
     email: 'david@wopr.mil',
-    budget: '$1000–$5000',
+    company: 'WOPR Systems',
+    phone: '+1 555-0188',
     message: 'Looking to connect our system to external APIs. Need quick live searches and paginated databases.',
     status: 'New',
     createdAt: new Date()
@@ -59,6 +64,7 @@ const getDemoStats = () => {
     total: demoLeads.length,
     new: demoLeads.filter(l => l.status === 'New').length,
     contacted: demoLeads.filter(l => l.status === 'Contacted').length,
+    qualified: demoLeads.filter(l => l.status === 'Qualified').length,
     closed: demoLeads.filter(l => l.status === 'Closed').length
   };
 };
@@ -66,24 +72,66 @@ const getDemoStats = () => {
 // @desc    Save new lead
 // @route   POST /api/leads
 const createLead = async (req, res) => {
-  // If in Demo Mode, block database save operation and return validation error structure
-  if (!isDbConnected()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Demo Mode: Database is not connected. Configure MONGODB_URI in the backend to enable this feature.',
-      errors: [
-        { field: 'db', message: 'Demo Mode. Database is not connected. Configure MONGODB_URI in the backend to enable this feature.' }
-      ]
-    });
-  }
-
   try {
-    const { name, email, budget, message } = req.body;
+    const { name, email, company, phone, message } = req.body;
+
+    // Duplicate Submission Prevention (last 10 minutes)
+    if (isDbConnected()) {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const duplicate = await Lead.findOne({
+        email: email.toLowerCase(),
+        message: message,
+        createdAt: { $gte: tenMinutesAgo }
+      });
+
+      if (duplicate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Duplicate submission detected. Please wait a few minutes before submitting the same inquiry again.'
+        });
+      }
+    } else {
+      // Demo mode duplicate check
+      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+      const duplicate = demoLeads.find(
+        l => l.email.toLowerCase() === email.toLowerCase() && 
+             l.message === message && 
+             new Date(l.createdAt).getTime() >= tenMinutesAgo
+      );
+      if (duplicate) {
+        return res.status(400).json({
+          success: false,
+          message: 'Duplicate submission detected. Please wait a few minutes.'
+        });
+      }
+    }
+
+    // Connect to DB and save
+    if (!isDbConnected()) {
+      // In demo mode, add to in-memory array for preview
+      const newLead = {
+        _id: 'demo_' + (demoLeads.length + 1),
+        name,
+        email,
+        company,
+        phone,
+        message,
+        status: 'New',
+        createdAt: new Date()
+      };
+      demoLeads.push(newLead);
+      return res.status(201).json({
+        success: true,
+        message: 'Lead submitted successfully (Demo Mode)',
+        data: newLead
+      });
+    }
 
     const lead = new Lead({
       name,
       email,
-      budget,
+      company,
+      phone,
       message,
     });
 
@@ -100,13 +148,33 @@ const createLead = async (req, res) => {
   }
 };
 
-// @desc    Get all leads (with optional status filter, pagination)
+// @desc    Get all leads (with sorting, searching, status filter, pagination)
 // @route   GET /api/leads
 const getAllLeads = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status, page = 1, limit = 8, q, sortBy = 'createdAt', order = 'desc' } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
+
+    // Build filter query
+    const query = {};
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+
+    if (q) {
+      query.$or = [
+        { name: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } },
+        { company: { $regex: q, $options: 'i' } },
+        { phone: { $regex: q, $options: 'i' } },
+        { message: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    // Build sorting parameters
+    const sortObj = {};
+    sortObj[sortBy] = order === 'desc' ? -1 : 1;
 
     // Fallback to in-memory demo data if database is not connected
     if (!isDbConnected()) {
@@ -114,6 +182,29 @@ const getAllLeads = async (req, res) => {
       if (status && status !== 'All') {
         filtered = filtered.filter(l => l.status === status);
       }
+      if (q) {
+        const lowerQ = q.toLowerCase();
+        filtered = filtered.filter(l => 
+          l.name.toLowerCase().includes(lowerQ) ||
+          l.email.toLowerCase().includes(lowerQ) ||
+          l.company.toLowerCase().includes(lowerQ) ||
+          l.phone.toLowerCase().includes(lowerQ) ||
+          l.message.toLowerCase().includes(lowerQ)
+        );
+      }
+
+      // Sort
+      filtered.sort((a, b) => {
+        let valA = a[sortBy] || '';
+        let valB = b[sortBy] || '';
+        if (sortBy === 'createdAt') {
+          return order === 'desc' ? new Date(valB) - new Date(valA) : new Date(valA) - new Date(valB);
+        }
+        if (typeof valA === 'string') {
+          return order === 'desc' ? valB.localeCompare(valA) : valA.localeCompare(valB);
+        }
+        return order === 'desc' ? valB - valA : valA - valB;
+      });
       
       const count = filtered.length;
       const paginated = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
@@ -128,14 +219,9 @@ const getAllLeads = async (req, res) => {
       });
     }
 
-    const query = {};
-    if (status && status !== 'All') {
-      query.status = status;
-    }
-
     const count = await Lead.countDocuments(query);
     const leads = await Lead.find(query)
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
 
@@ -143,6 +229,7 @@ const getAllLeads = async (req, res) => {
       total: await Lead.countDocuments({}),
       new: await Lead.countDocuments({ status: 'New' }),
       contacted: await Lead.countDocuments({ status: 'Contacted' }),
+      qualified: await Lead.countDocuments({ status: 'Qualified' }),
       closed: await Lead.countDocuments({ status: 'Closed' }),
     };
 
@@ -165,7 +252,7 @@ const getAllLeads = async (req, res) => {
 const updateLeadStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    if (!['New', 'Contacted', 'Closed'].includes(status)) {
+    if (!['New', 'Contacted', 'Qualified', 'Closed'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status value' });
     }
 
@@ -200,80 +287,38 @@ const updateLeadStatus = async (req, res) => {
   }
 };
 
-// @desc    Search leads by name, email, budget, or message
+// @desc    Search leads
 // @route   GET /api/leads/search
 const searchLeads = async (req, res) => {
-  try {
-    const { q, status, page = 1, limit = 10 } = req.query;
-    const pageNum = parseInt(page);
-    const limitNum = parseInt(limit);
+  // Reuse full query capability inside getAllLeads
+  return getAllLeads(req, res);
+};
 
-    // Fallback to in-memory demo search if database is not connected
+// @desc    Delete a lead
+// @route   DELETE /api/leads/:id
+const deleteLead = async (req, res) => {
+  try {
+    // Fallback to in-memory demo deletion
     if (!isDbConnected()) {
-      let filtered = [...demoLeads];
-      if (q) {
-        const lowerQ = q.toLowerCase();
-        filtered = filtered.filter(l => 
-          l.name.toLowerCase().includes(lowerQ) ||
-          l.email.toLowerCase().includes(lowerQ) ||
-          l.budget.toLowerCase().includes(lowerQ) ||
-          l.message.toLowerCase().includes(lowerQ)
-        );
+      const index = demoLeads.findIndex(l => l._id === req.params.id);
+      if (index === -1) {
+        return res.status(404).json({ success: false, message: 'Lead not found' });
       }
-      if (status && status !== 'All') {
-        filtered = filtered.filter(l => l.status === status);
-      }
-      
-      const count = filtered.length;
-      const paginated = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
-      
+      demoLeads.splice(index, 1);
       return res.json({
         success: true,
-        count,
-        totalPages: Math.ceil(count / limitNum),
-        currentPage: pageNum,
-        leads: paginated,
-        stats: getDemoStats()
+        message: 'Demo Mode: Lead deleted locally'
       });
     }
 
-    let query = {};
-    if (q) {
-      query.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { email: { $regex: q, $options: 'i' } },
-        { budget: { $regex: q, $options: 'i' } },
-        { message: { $regex: q, $options: 'i' } }
-      ];
+    const lead = await Lead.findByIdAndDelete(req.params.id);
+    if (!lead) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
     }
 
-    if (status && status !== 'All') {
-      query.status = status;
-    }
-
-    const count = await Lead.countDocuments(query);
-    const leads = await Lead.find(query)
-      .sort({ createdAt: -1 })
-      .skip((pageNum - 1) * limitNum)
-      .limit(limitNum);
-
-    const stats = {
-      total: await Lead.countDocuments({}),
-      new: await Lead.countDocuments({ status: 'New' }),
-      contacted: await Lead.countDocuments({ status: 'Contacted' }),
-      closed: await Lead.countDocuments({ status: 'Closed' }),
-    };
-
-    res.json({
-      success: true,
-      count,
-      totalPages: Math.ceil(count / limitNum),
-      currentPage: pageNum,
-      leads,
-      stats
-    });
+    res.json({ success: true, message: 'Lead deleted successfully' });
   } catch (error) {
-    console.error('Error searching leads:', error.message);
+    console.error('Error deleting lead:', error.message);
     res.status(500).json({ success: false, message: 'Server Error', error: error.message });
   }
 };
@@ -282,5 +327,6 @@ module.exports = {
   createLead,
   getAllLeads,
   updateLeadStatus,
-  searchLeads
+  searchLeads,
+  deleteLead
 };

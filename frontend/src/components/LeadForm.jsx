@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Building, Phone, Mail, User, MessageSquare } from 'lucide-react';
 import { submitLead } from '../services/api';
 
 const LeadForm = ({ onSuccess, onError, isDemo }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastSubmitted, setLastSubmitted] = useState({ email: '', message: '', time: 0 });
   
   const {
     register,
@@ -15,25 +16,30 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
     defaultValues: {
       name: '',
       email: '',
-      budget: '',
+      company: '',
+      phone: '',
       message: ''
     }
   });
 
   const onSubmit = async (data) => {
-    if (isDemo) {
-      onError([
-        'Demo Mode',
-        'Database is not connected.',
-        'Configure MONGODB_URI in the backend to enable this feature.'
-      ]);
+    // Client-side Duplicate Submission Check (1-minute window)
+    const now = Date.now();
+    if (
+      data.email.toLowerCase() === lastSubmitted.email.toLowerCase() &&
+      data.message === lastSubmitted.message &&
+      now - lastSubmitted.time < 60000
+    ) {
+      onError('Duplicate submission detected. Please wait a minute before submitting the same message.');
       return;
     }
+
     setIsSubmitting(true);
     try {
       const response = await submitLead(data);
       if (response.success) {
         onSuccess(response.message || 'Lead submitted successfully');
+        setLastSubmitted({ email: data.email, message: data.message, time: now });
         reset();
       } else {
         onError(response.message || 'Failed to submit lead');
@@ -42,7 +48,6 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
       console.error('Submission error:', error);
       const serverErrors = error.response?.data?.errors;
       if (serverErrors && Array.isArray(serverErrors)) {
-        // Extract validation error messages
         onError(serverErrors.map(err => err.message));
       } else {
         onError(error.response?.data?.message || 'Something went wrong. Please try again.');
@@ -56,7 +61,8 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {/* Name Input */}
       <div>
-        <label htmlFor="name" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+        <label htmlFor="name" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+          <User className="w-3.5 h-3.5 text-indigo-400" />
           Full Name
         </label>
         <input
@@ -64,7 +70,7 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
           type="text"
           className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border ${
             errors.name ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-indigo-950 focus:border-indigo-500 focus:ring-indigo-500/20'
-          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all`}
+          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all text-sm`}
           placeholder="John Doe"
           {...register('name', { required: 'Name is required' })}
         />
@@ -75,7 +81,8 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
 
       {/* Email Input */}
       <div>
-        <label htmlFor="email" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+        <label htmlFor="email" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+          <Mail className="w-3.5 h-3.5 text-indigo-400" />
           Email Address
         </label>
         <input
@@ -83,7 +90,7 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
           type="email"
           className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border ${
             errors.email ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-indigo-950 focus:border-indigo-500 focus:ring-indigo-500/20'
-          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all`}
+          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all text-sm`}
           placeholder="john@example.com"
           {...register('email', {
             required: 'Email is required',
@@ -98,48 +105,59 @@ const LeadForm = ({ onSuccess, onError, isDemo }) => {
         )}
       </div>
 
-      {/* Budget Range Input */}
+      {/* Company Input */}
       <div>
-        <label htmlFor="budget" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-          Estimated Budget Range
+        <label htmlFor="company" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+          <Building className="w-3.5 h-3.5 text-indigo-400" />
+          Company Name
         </label>
-        <div className="relative">
-          <select
-            id="budget"
-            className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border ${
-              errors.budget ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-indigo-950 focus:border-indigo-500 focus:ring-indigo-500/20'
-            } text-slate-100 focus:outline-none focus:ring-4 transition-all appearance-none cursor-pointer`}
-            {...register('budget', { required: 'Please select a budget range' })}
-          >
-            <option value="" disabled className="bg-slate-950 text-slate-500">Select budget range...</option>
-            <option value="< $500" className="bg-slate-950 text-slate-200">&lt; $500</option>
-            <option value="$500–$1000" className="bg-slate-950 text-slate-200">$500 – $1000</option>
-            <option value="$1000–$5000" className="bg-slate-950 text-slate-200">$1000 – $5000</option>
-            <option value=">$5000" className="bg-slate-950 text-slate-200">&gt; $5000</option>
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-            </svg>
-          </div>
-        </div>
-        {errors.budget && (
-          <span className="text-xs text-rose-400 mt-1 block">{errors.budget.message}</span>
+        <input
+          id="company"
+          type="text"
+          className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border ${
+            errors.company ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-indigo-950 focus:border-indigo-500 focus:ring-indigo-500/20'
+          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all text-sm`}
+          placeholder="Acme Corp"
+          {...register('company', { required: 'Company is required' })}
+        />
+        {errors.company && (
+          <span className="text-xs text-rose-400 mt-1 block">{errors.company.message}</span>
+        )}
+      </div>
+
+      {/* Phone Input */}
+      <div>
+        <label htmlFor="phone" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+          <Phone className="w-3.5 h-3.5 text-indigo-400" />
+          Phone Number
+        </label>
+        <input
+          id="phone"
+          type="tel"
+          className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border ${
+            errors.phone ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-indigo-950 focus:border-indigo-500 focus:ring-indigo-500/20'
+          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all text-sm`}
+          placeholder="+1 (555) 000-0000"
+          {...register('phone', { required: 'Phone number is required' })}
+        />
+        {errors.phone && (
+          <span className="text-xs text-rose-400 mt-1 block">{errors.phone.message}</span>
         )}
       </div>
 
       {/* Message Input */}
       <div>
-        <label htmlFor="message" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-          Message / Details
+        <label htmlFor="message" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+          <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+          Message / Project Details
         </label>
         <textarea
           id="message"
           rows={3}
           className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border ${
             errors.message ? 'border-rose-500/50 focus:border-rose-500 focus:ring-rose-500/20' : 'border-indigo-950 focus:border-indigo-500 focus:ring-indigo-500/20'
-          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all resize-none`}
-          placeholder="Briefly describe your requirements (min 10 characters)..."
+          } text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-4 transition-all resize-none text-sm`}
+          placeholder="Describe your requirements (minimum 10 characters)..."
           {...register('message', {
             required: 'Message is required',
             minLength: {

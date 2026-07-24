@@ -13,13 +13,15 @@ const LeadSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
   },
-  budget: {
+  company: {
     type: String,
-    required: [true, 'Budget is required'],
-    enum: {
-      values: ['< $500', '$500–$1000', '$500-$1000', '$1000–$5000', '$1000-$5000', '>$5000'],
-      message: 'Budget must be one of the specified options',
-    },
+    required: [true, 'Company is required'],
+    trim: true,
+  },
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true,
   },
   message: {
     type: String,
@@ -29,7 +31,7 @@ const LeadSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ['New', 'Contacted', 'Closed'],
+    enum: ['New', 'Contacted', 'Qualified', 'Closed'],
     default: 'New',
   },
   createdAt: {

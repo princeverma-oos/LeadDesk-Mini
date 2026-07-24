@@ -1,7 +1,7 @@
 import React from 'react';
-import { Layers, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { Layers, ShieldCheck, ArrowLeft, LogOut, User } from 'lucide-react';
 
-const Navbar = ({ currentPath, onNavigate }) => {
+const Navbar = ({ currentPath, onNavigate, user, onLogout }) => {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-indigo-950/30 bg-slate-950/40 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -18,22 +18,57 @@ const Navbar = ({ currentPath, onNavigate }) => {
         </div>
 
         <nav className="flex items-center gap-4">
-          {currentPath === '/admin' ? (
-            <button
-              onClick={() => onNavigate('/')}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-slate-100 hover:bg-white/5 transition-all border border-slate-800"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Site
-            </button>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="hidden md:flex items-center gap-1.5 text-xs text-slate-400 bg-indigo-950/20 border border-indigo-500/10 px-3 py-1.5 rounded-lg">
+                <User className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Logged in as <strong className="text-indigo-300 font-semibold">{user.username}</strong></span>
+              </span>
+              
+              {currentPath === '/admin' ? (
+                <button
+                  onClick={() => onNavigate('/')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-slate-100 hover:bg-white/5 transition-all border border-slate-800 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Site
+                </button>
+              ) : (
+                <button
+                  onClick={() => onNavigate('/admin')}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-indigo-300 bg-indigo-950/30 hover:bg-indigo-950/60 border border-indigo-500/20 hover:border-indigo-500/50 transition-all cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                  Admin Dashboard
+                </button>
+              )}
+
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg text-rose-300 bg-rose-950/20 hover:bg-rose-950/50 border border-rose-500/10 hover:border-rose-500/40 transition-all cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Logout
+              </button>
+            </div>
           ) : (
-            <button
-              onClick={() => onNavigate('/admin')}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-indigo-300 bg-indigo-950/30 hover:bg-indigo-950/60 border border-indigo-500/20 hover:border-indigo-500/50 transition-all btn-ripple"
-            >
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              Admin Dashboard
-            </button>
+            currentPath === '/login' ? (
+              <button
+                onClick={() => onNavigate('/')}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-slate-300 hover:text-slate-100 hover:bg-white/5 transition-all border border-slate-800 cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Site
+              </button>
+            ) : (
+              <button
+                onClick={() => onNavigate('/login')}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg text-indigo-300 bg-indigo-950/30 hover:bg-indigo-950/60 border border-indigo-500/20 hover:border-indigo-500/50 transition-all cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                Admin Dashboard
+              </button>
+            )
           )}
         </nav>
       </div>

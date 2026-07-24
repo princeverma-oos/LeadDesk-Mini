@@ -1,23 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const { validateLead } = require('../middleware/validation');
+const { verifyJWT } = require('../middleware/auth');
 const {
   createLead,
   getAllLeads,
   updateLeadStatus,
-  searchLeads
+  searchLeads,
+  deleteLead
 } = require('../controllers/leadsController');
 
-// Save lead
+// Save lead (Public endpoint)
 router.post('/', validateLead, createLead);
 
-// Return all leads
-router.get('/', getAllLeads);
-
-// Search leads
-router.get('/search', searchLeads);
-
-// Update lead status
-router.patch('/:id', updateLeadStatus);
+// Protected endpoints (require authentication)
+router.get('/', verifyJWT, getAllLeads);
+router.get('/search', verifyJWT, searchLeads);
+router.patch('/:id', verifyJWT, updateLeadStatus);
+router.delete('/:id', verifyJWT, deleteLead);
 
 module.exports = router;
