@@ -31,6 +31,26 @@ LeadDesk Mini is a premium, fully responsive sales-focused Lead CRM and capture 
 
 ---
 
+## Demo Mode
+
+This project can run without MongoDB.
+
+When `MONGODB_URI` is not configured:
+
+- Backend starts normally.
+- Dashboard is fully accessible.
+- UI/UX can be explored.
+- Database operations are disabled.
+- A demo notification is displayed.
+
+To enable full functionality, configure:
+
+```env
+MONGODB_URI=<your_connection_string>
+```
+
+---
+
 ## Technology Stack
 
 - **Frontend**: React, Vite, Tailwind CSS v4, Framer Motion, React Hook Form, Axios, Lucide React

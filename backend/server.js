@@ -5,7 +5,12 @@ const connectDB = require('./config/db');
 const leadRoutes = require('./routes/leads');
 
 // Connect to Database
-connectDB();
+// Connect to Database only if MONGODB_URI is provided
+if (process.env.MONGODB_URI) {
+  connectDB();
+} else {
+  console.log("⚠️ MongoDB is not configured. Running in Demo Mode.");
+}
 
 const app = express();
 
@@ -35,6 +40,16 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+app.get("/api/status", (req, res) => {
+  res.json({
+    success: true,
+    demoMode: !process.env.MONGODB_URI,
+    message: process.env.MONGODB_URI
+      ? "Database Connected"
+      : "Demo Mode: Database not connected. Configure MONGODB_URI to enable data persistence."
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

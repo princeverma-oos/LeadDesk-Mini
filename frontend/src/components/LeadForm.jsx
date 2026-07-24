@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Send, Loader2 } from 'lucide-react';
 import { submitLead } from '../services/api';
 
-const LeadForm = ({ onSuccess, onError }) => {
+const LeadForm = ({ onSuccess, onError, isDemo }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
@@ -21,6 +21,14 @@ const LeadForm = ({ onSuccess, onError }) => {
   });
 
   const onSubmit = async (data) => {
+    if (isDemo) {
+      onError([
+        'Demo Mode',
+        'Database is not connected.',
+        'Configure MONGODB_URI in the backend to enable this feature.'
+      ]);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const response = await submitLead(data);

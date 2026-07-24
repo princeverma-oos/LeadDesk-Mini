@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Inbox, Search, Filter, RefreshCw, ChevronLeft, ChevronRight,
   TrendingUp, CircleDot, UserCheck, CheckCircle, ArrowRightLeft,
-  LayoutDashboard, Menu, X, Star
+  LayoutDashboard, Menu, X, Star, Trash2
 } from 'lucide-react';
 import { fetchLeads, updateLeadStatus, searchLeads } from '../services/api';
 import Toast from '../components/Toast';
@@ -28,7 +28,7 @@ const AnimatedCounter = ({ value, duration = 800 }) => {
   return <span>{count}</span>;
 };
 
-const AdminDashboard = () => {
+const AdminDashboard = ({ onNavigate, isDemo }) => {
   const [leads, setLeads] = useState([]);
   const [stats, setStats] = useState({ total: 0, new: 0, contacted: 0, closed: 0 });
   const [loading, setLoading] = useState(true);
@@ -86,7 +86,22 @@ const AdminDashboard = () => {
     loadLeads();
   }, [debouncedSearch, statusFilter, currentPage]);
 
+  const handleDatabaseAction = (actionName) => {
+    setToast({
+      message: [
+        'Demo Mode',
+        'Database is not connected.',
+        'Configure MONGODB_URI in the backend to enable this feature.'
+      ],
+      type: 'error'
+    });
+  };
+
   const handleStatusChange = async (id, newStatus) => {
+    if (isDemo) {
+      handleDatabaseAction('Save Lead');
+      return;
+    }
     try {
       const response = await updateLeadStatus(id, newStatus);
       if (response.success) {
@@ -178,14 +193,28 @@ const AdminDashboard = () => {
             </div>
           </div>
           
-          <button 
-            onClick={loadLeads}
-            disabled={loading}
-            className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-indigo-950/40 text-slate-300 hover:text-white transition-all cursor-pointer hover:bg-slate-800 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Refresh Leads
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              onClick={() => handleDatabaseAction('Import Leads')}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-950/45 hover:bg-indigo-950/80 border border-indigo-500/20 hover:border-indigo-500/50 text-indigo-300 transition-all cursor-pointer"
+            >
+              Import Leads
+            </button>
+            <button 
+              onClick={() => handleDatabaseAction('Start Campaign')}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-950/45 hover:bg-indigo-950/80 border border-indigo-500/20 hover:border-indigo-500/50 text-indigo-300 transition-all cursor-pointer"
+            >
+              Start Campaign
+            </button>
+            <button 
+              onClick={loadLeads}
+              disabled={loading}
+              className="flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-900 border border-indigo-950/40 text-slate-300 hover:text-white transition-all cursor-pointer hover:bg-slate-800 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Dashboard Statistics Cards Grid */}
@@ -287,7 +316,8 @@ const AdminDashboard = () => {
                     <th className="p-4">Budget</th>
                     <th className="p-4">Message</th>
                     <th className="p-4">Submitted At</th>
-                    <th className="p-4 pr-6">Status</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 pr-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-indigo-950/10">
@@ -309,7 +339,7 @@ const AdminDashboard = () => {
                       <td className="p-4 text-slate-500 whitespace-nowrap">
                         {formatDate(lead.createdAt)}
                       </td>
-                      <td className="p-4 pr-6">
+                      <td className="p-4">
                         <select
                           value={lead.status}
                           onChange={(e) => handleStatusChange(lead._id, e.target.value)}
@@ -325,6 +355,15 @@ const AdminDashboard = () => {
                           <option value="Contacted" className="bg-slate-950 text-slate-200">Contacted</option>
                           <option value="Closed" className="bg-slate-950 text-slate-200">Closed</option>
                         </select>
+                      </td>
+                      <td className="p-4 pr-6 text-right">
+                        <button
+                          onClick={() => handleDatabaseAction('Delete Lead')}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                          title="Delete Lead"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   ))}

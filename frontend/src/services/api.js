@@ -34,4 +34,10 @@ export const searchLeads = async (query, params = {}) => {
   return response.data;
 };
 
+// Fetch demo status from backend
+export const fetchStatus = async () => {
+  const response = await API.get('/status');
+  return response.data;
+};
+
 export default API;

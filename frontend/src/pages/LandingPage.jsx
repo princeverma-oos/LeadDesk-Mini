@@ -4,7 +4,7 @@ import { BarChart3, Shield, Users, Zap, CheckCircle2, ArrowRight } from 'lucide-
 import LeadForm from '../components/LeadForm';
 import Toast from '../components/Toast';
 
-const LandingPage = () => {
+const LandingPage = ({ isDemo }) => {
   const [toast, setToast] = useState(null); // { message, type }
 
   const handleSuccess = (msg) => {
@@ -202,7 +202,7 @@ const LandingPage = () => {
         </div>
 
         <div className="glass-card p-6 md:p-8 rounded-3xl border border-indigo-500/25 shadow-2xl text-left max-w-xl mx-auto">
-          <LeadForm onSuccess={handleSuccess} onError={handleError} />
+          <LeadForm onSuccess={handleSuccess} onError={handleError} isDemo={isDemo} />
         </div>
       </section>
 
