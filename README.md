@@ -134,6 +134,6 @@ Make sure you have [Node.js](https://nodejs.org) (v16+) and [MongoDB](https://ww
 4. Open [http://localhost:5173](http://localhost:5173) in your browser to view the Landing Page. Go to [http://localhost:5173/admin](http://localhost:5173/admin) to view the CRM Dashboard.
 
 ---
-
+Deployed Main link:- https://leaddesk-mini-frontend.onrender.com
 ## License
 Built for Digital Heroes Training Task. Linked to [https://digitalheroesco.com](https://digitalheroesco.com).
