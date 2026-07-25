@@ -368,6 +368,6 @@ This runs the automated script which logs authentication, JWT protection, schema
 - **Webhooks**: Dispatch Slack or Discord notifications instantly upon qualifying inquiries.
 
 ---
-
+Deployed Main link:- https://leaddesk-mini-frontend.onrender.com
 ## License
 Created for Digital Heroes Training Task. Linked to [https://digitalheroesco.com](https://digitalheroesco.com).
